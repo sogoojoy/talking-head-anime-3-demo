@@ -92,8 +92,16 @@ class FiveStepPoserComputationProtocol(CachedComputationProtocol):
             eyebrow_morphing_combiner_output = self.get_output(
                 Network.eyebrow_morphing_combiner.outputs_key, modules, batch, outputs)
             eyebrow_morphed_image = eyebrow_morphing_combiner_output[self.eyebrow_morphed_image_index]
-            input_image = batch[0][:, :, 32:32 + 192, (32 + 128):(32 + 192 + 128)].clone()
-            input_image[:, :, 32:32 + 128, 32:32 + 128] = eyebrow_morphed_image
+            input_image = batch[0][:, :, 32:32 + 192, (32 + 128):(32 + 192 + 128)].clone() # w/o eyebrow
+            input_image[:, :, 32:32 + 128, 32:32 + 128] = eyebrow_morphed_image# w/ eyebrow
+            from PIL import Image
+            tensor = input_image
+            tensor = (tensor + 1) / 2
+            tensor = tensor.clamp(0, 1)
+            tensor = tensor.mul(255).byte()
+            tensor = tensor[0].permute(1, 2, 0).cpu().numpy()
+            image = Image.fromarray(tensor)
+            image.save(r'D:\code\talking-head-anime-3-demo\data\test\vis_face_region.png')
             face_pose = batch[1][:, NUM_EYEBROW_PARAMS:NUM_EYEBROW_PARAMS + NUM_FACE_PARAMS]
             return modules[Network.face_morpher.name].forward(input_image, face_pose)
         elif key == Branch.face_morphed_full.name:
@@ -360,3 +368,13 @@ if __name__ == "__main__":
             acc = acc + elapsed_time
 
     print("average:", acc / repeat)
+
+
+            # from PIL import Image
+            # tensor = input_image
+            # tensor = (tensor + 1) / 2
+            # tensor = tensor.clamp(0, 1)
+            # tensor = tensor.mul(255).byte()
+            # tensor = tensor[0].permute(1, 2, 0).cpu().numpy()
+            # image = Image.fromarray(tensor)
+            # image.save(r'D:\code\talking-head-anime-3-demo\data\test\vis_face_region.png')

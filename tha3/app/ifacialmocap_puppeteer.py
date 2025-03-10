@@ -1,7 +1,8 @@
+import sys
+sys.path.append('D:\code\talking-head-anime-3-demo')
 import argparse
 import os
 import socket
-import sys
 import threading
 import time
 from typing import Optional

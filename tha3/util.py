@@ -1,7 +1,7 @@
 import math
 import os
 from typing import List
-
+from PIL import Image
 import PIL.Image
 import numpy
 import torch
@@ -258,6 +258,33 @@ def resize_PIL_image(pil_image, size=(256, 256)):
     d = min(w, h)
     r = ((w - d) // 2, (h - d) // 2, (w + d) // 2, (h + d) // 2)
     return pil_image.resize(size, resample=PIL.Image.LANCZOS, box=r)
+
+
+def resize_scale_PIL_image(pil_image, aspect_ratio:float, x_os: int, y_os: int, size=(256, 256)):
+    target_size = (512, 512)
+
+    # 创建一个透明的背景图像
+    target_img = Image.new('RGBA', target_size, (0, 0, 0, 0))
+
+    # 计算缩放比例
+    original_width, original_height = pil_image.size
+    target_width, target_height = target_size
+
+    # aspect_ratio = min(target_width / original_width, target_height / original_height)
+    new_size = (int(original_width * aspect_ratio), int(original_height * aspect_ratio))
+
+    # 缩放原始图像
+    scaled_img = pil_image.resize(new_size, Image.ANTIALIAS)
+
+    # 计算居中位置
+    x_offset = (target_width - new_size[0]) // 2 + x_os
+    y_offset = (target_height - new_size[1]) // 2 + y_os
+
+    # 粘贴缩放后的图像到目标图像的中心位置
+    target_img.paste(scaled_img, (x_offset, y_offset), scaled_img)
+
+
+    return target_img, x_offset, y_offset, new_size, original_width, original_height
 
 
 def extract_PIL_image_from_filelike(file):

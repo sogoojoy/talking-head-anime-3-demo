@@ -1,4 +1,4 @@
-name: talking-head-anime-3-demo
+name: talking-head-anime-3-demo-2
 channels:
   - pytorch
   - conda-forge

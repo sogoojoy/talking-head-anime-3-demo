@@ -128,6 +128,8 @@ class IFacialMocapPoseConverter25(IFacialMocapPoseConverter):
         self.mouth_eee_index = pose_parameters.get_parameter_index("mouth_eee")
         self.mouth_ooo_index = pose_parameters.get_parameter_index("mouth_ooo")
 
+        self.mouth_scale = 1.0
+
         self.mouth_lowered_corner_left_index = pose_parameters.get_parameter_index("mouth_lowered_corner_left")
         self.mouth_lowered_corner_right_index = pose_parameters.get_parameter_index("mouth_lowered_corner_right")
         self.mouth_raised_corner_left_index = pose_parameters.get_parameter_index("mouth_raised_corner_left")
@@ -275,7 +277,9 @@ class IFacialMocapPoseConverter25(IFacialMocapPoseConverter):
                 sign = 1.0
             return (threshold * sign, (abs(param) - threshold) * sign)
 
-    def convert(self, ifacialmocap_pose: Dict[str, float]) -> List[float]:
+    def convert(self, ifacialmocap_pose: Dict[str, float], mouth_scale: float = 1.0, eyebrow_scale: float = 1.0) -> List[float]:
+        self.mouth_scale = mouth_scale
+        self.eyebrow_scale = eyebrow_scale
         pose = [0.0 for i in range(self.pose_size)]
 
         smile_value = \
@@ -297,29 +301,29 @@ class IFacialMocapPoseConverter25(IFacialMocapPoseConverter):
 
             brow_up_left = clamp(brow_inner_up + brow_outer_up_left, 0.0, 1.0)
             brow_up_right = clamp(brow_inner_up + brow_outer_up_right, 0.0, 1.0)
-            pose[self.eyebrow_raised_left_index] = brow_up_left
-            pose[self.eyebrow_raised_right_index] = brow_up_right
+            pose[self.eyebrow_raised_left_index] = brow_up_left * self.eyebrow_scale
+            pose[self.eyebrow_raised_right_index] = brow_up_right * self.eyebrow_scale
 
             brow_down_left = (1.0 - smile_degree) \
                              * clamp(ifacialmocap_pose[BROW_DOWN_LEFT] / self.args.eyebrow_down_max_value, 0.0, 1.0)
             brow_down_right = (1.0 - smile_degree) \
                               * clamp(ifacialmocap_pose[BROW_DOWN_RIGHT] / self.args.eyebrow_down_max_value, 0.0, 1.0)
             if self.args.eyebrow_down_mode == EyebrowDownMode.TROUBLED:
-                pose[self.eyebrow_troubled_left_index] = brow_down_left
-                pose[self.eyebrow_troubled_right_index] = brow_down_right
+                pose[self.eyebrow_troubled_left_index] = brow_down_left * self.eyebrow_scale
+                pose[self.eyebrow_troubled_right_index] = brow_down_right * self.eyebrow_scale
             elif self.args.eyebrow_down_mode == EyebrowDownMode.ANGRY:
-                pose[self.eyebrow_angry_left_index] = brow_down_left
-                pose[self.eyebrow_angry_right_index] = brow_down_right
+                pose[self.eyebrow_angry_left_index] = brow_down_left * self.eyebrow_scale
+                pose[self.eyebrow_angry_right_index] = brow_down_right * self.eyebrow_scale
             elif self.args.eyebrow_down_mode == EyebrowDownMode.LOWERED:
-                pose[self.eyebrow_lowered_left_index] = brow_down_left
-                pose[self.eyebrow_lowered_right_index] = brow_down_right
+                pose[self.eyebrow_lowered_left_index] = brow_down_left * self.eyebrow_scale
+                pose[self.eyebrow_lowered_right_index] = brow_down_right * self.eyebrow_scale
             elif self.args.eyebrow_down_mode == EyebrowDownMode.SERIOUS:
-                pose[self.eyebrow_serious_left_index] = brow_down_left
-                pose[self.eyebrow_serious_right_index] = brow_down_right
+                pose[self.eyebrow_serious_left_index] = brow_down_left * self.eyebrow_scale
+                pose[self.eyebrow_serious_right_index] = brow_down_right * self.eyebrow_scale
 
             brow_happy_value = clamp(smile_value, 0.0, 1.0) * smile_degree
-            pose[self.eyebrow_happy_left_index] = brow_happy_value
-            pose[self.eyebrow_happy_right_index] = brow_happy_value
+            pose[self.eyebrow_happy_left_index] = brow_happy_value * self.eyebrow_scale
+            pose[self.eyebrow_happy_right_index] = brow_happy_value * self.eyebrow_scale
 
         # Eye
         if True:
@@ -375,18 +379,19 @@ class IFacialMocapPoseConverter25(IFacialMocapPoseConverter):
             pose[self.iris_small_left_index] = self.args.iris_small_left
             pose[self.iris_small_right_index] = self.args.iris_small_right
 
-        # Head rotation
+        # Head rotation #joy
         if True:
-            x_param = clamp(-ifacialmocap_pose[HEAD_BONE_X] * 180.0 / math.pi, -15.0, 15.0) / 15.0
-            pose[self.head_x_index] = x_param
+            if HEAD_BONE_X in ifacialmocap_pose:
+                x_param = clamp(-ifacialmocap_pose[HEAD_BONE_X] * 180.0 / math.pi, -15.0, 15.0) / 15.0
+                pose[self.head_x_index] = x_param
 
-            y_param = clamp(-ifacialmocap_pose[HEAD_BONE_Y] * 180.0 / math.pi, -10.0, 10.0) / 10.0
-            pose[self.head_y_index] = y_param
-            pose[self.body_y_index] = y_param
+                y_param = clamp(-ifacialmocap_pose[HEAD_BONE_Y] * 180.0 / math.pi, -10.0, 10.0) / 10.0
+                pose[self.head_y_index] = y_param
+                pose[self.body_y_index] = y_param
 
-            z_param = clamp(ifacialmocap_pose[HEAD_BONE_Z] * 180.0 / math.pi, -15.0, 15.0) / 15.0
-            pose[self.neck_z_index] = z_param
-            pose[self.body_z_index] = z_param
+                z_param = clamp(ifacialmocap_pose[HEAD_BONE_Z] * 180.0 / math.pi, -15.0, 15.0) / 15.0
+                pose[self.neck_z_index] = z_param
+                pose[self.body_z_index] = z_param
 
             # Mouth
         if True:
@@ -432,13 +437,13 @@ class IFacialMocapPoseConverter25(IFacialMocapPoseConverter):
                     loss, decomp, bounds=[(0.0, 1.0), (0.0, 1.0), (0.0, 1.0), (0.0, 1.0)])
                 decomp = opt_result["x"]
                 restricted_decomp = [decomp.item(0), decomp.item(1), decomp.item(2), decomp.item(3)]
-                pose[self.mouth_aaa_index] = restricted_decomp[0]
-                pose[self.mouth_iii_index] = restricted_decomp[1]
+                pose[self.mouth_aaa_index] = restricted_decomp[0] * self.mouth_scale
+                pose[self.mouth_iii_index] = restricted_decomp[1] * self.mouth_scale
                 mouth_funnel_denom = self.args.mouth_funnel_max_value - self.args.mouth_funnel_min_value
                 ooo_alpha = clamp((mouth_funnel - self.args.mouth_funnel_min_value) / mouth_funnel_denom, 0.0, 1.0)
                 uo_value = clamp(restricted_decomp[2] + restricted_decomp[3], 0.0, 1.0)
-                pose[self.mouth_uuu_index] = uo_value * (1.0 - ooo_alpha)
-                pose[self.mouth_ooo_index] = uo_value * ooo_alpha
+                pose[self.mouth_uuu_index] = uo_value * (1.0 - ooo_alpha) * self.mouth_scale
+                pose[self.mouth_ooo_index] = uo_value * ooo_alpha * self.mouth_scale
 
         if self.panel is not None:
             frequency = self.breathing_frequency_slider.GetValue()
